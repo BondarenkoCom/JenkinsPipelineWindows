@@ -11,7 +11,6 @@ $GitLabApiprojectId = "/projects/352";
 $GitlabApiPipelinesPart = "/pipelines/";
 $GitlabApiJobPart = "/jobs/";
 $GitlabApiPartCom = "/repository/commits/";
-#переменные для работы в Jenkins
 $FeatureTrim  = ($ENV:gitlabBranch).TrimStart("feature/");
 $TrimValue = $FeatureTrim;
 $GitlabMergeRequestLastCommit =  $ENV:gitlabMergeRequestLastCommit;
@@ -52,7 +51,7 @@ if($GitLabBranch -eq "master")
 
 $WebResponseCommit = Invoke-WebRequest -Method Get -Uri $UrlCommit -Headers $Headers; 
 
-<#разбираем ответ в Json#>
+<# Parsing the response in Json #>
 $KeyValueCommit = ConvertFrom-json $WebResponseCommit.Content; 
 $CommitMessage = $KeyValueCommit.message ;
 Write-Host $CommitMessage;
@@ -74,27 +73,27 @@ if($CommitMessage -ne "needAutoTest")
    currentBuild.rawBuild.@result = hudson.model.Result.SUCCESS
   
 }
-  <#получаем коммит по last commit#>
+<# Get the commit by last commit #>
 
    
-    <#вытаскиваем pipelineId#>
+<# Extract the pipelineId #>
     $PipeId = $KeyValueCommit.last_pipeline.id;
     Write-Host = "pipeid -" $PipeId;
 
     $UrlJobsPipeline = $GitLabApiUrl + $GitLabApiprojectId + $GitlabApiPipelinesPart + $PipeId + $GitlabApiJobPart;
     write-host -BackgroundColor Green -ForegroundColor Black $UrlJobsPipeline;
 
-    <#вытаскиваем все джобы с PipelineId#>
+<# Extract all jobs with PipelineId #>
     
     $WebResponsePipelineJobs = Invoke-WebRequest -Method Get -Uri $UrlJobsPipeline -Headers $Headers; 
     $ConvertJobsToJson = ConvertFrom-json $WebResponsePipelineJobs.Content;
     
     Write-host "all jobs with - "$PipeId;
         
-  <#проходим через foreach по всему ответу апи  в  поиске TaxcomAgentTestsWin#>
+<# Loop through the entire API response in search of TaxcomAgentTestsWin #>
   :checkResponse foreach($StageEnd in $ConvertJobsToJson)
   {
-    <#когда находим нужный job по имени то забираем его id #>
+<# When the required job is found by name, take its id #>
     if($StageEnd.name -eq $JobNamefeature -or $StageEnd.name -eq $JobNameIntegrated -or $StageEnd.name -eq $JobNameRelease)
     {
      Write-host "-----------------";    
@@ -108,16 +107,15 @@ if($CommitMessage -ne "needAutoTest")
     }
    }
    
- <#обработчик для проверки состояние Job #>
+<# Handler for checking the Job state #>
 
  $i = 0
  While($i -ne $JobCount)
  {
-   <#делаем запрос по job id#>
+<# Make a request by job id #>
   try{
 
   $UrlJob = $GitLabApiUrl + $GitLabApiprojectId + $GitlabApiJobPart + $stageEnd.id
-  #$UrlJob = "https://gitlab.taxcom.ru/api/v4/projects/352/jobs/"+$StageEnd.id
   Write-host -BackgroundColor Green -ForegroundColor Black "urlJob" $UrlJob;
   
   $webResponseJob = Invoke-WebRequest -Method Get -Uri $UrlJob -Headers $headers 
@@ -132,11 +130,9 @@ if($CommitMessage -ne "needAutoTest")
   $saveId = $keyValueJob.id;
   Write-host "keyValueJob id" -BackgroundColor Green -ForegroundColor Black $saveId;
 
-  #новая проверка на статус пайплайна
   
   $savePipelineId = $keyValueJob.pipeline.id;
   $UrlPipelineCheck = $GitLabApiUrl + $GitLabApiprojectId + $GitlabApiPipelinesPart + $PipeId;
-  #$urlPipelineCheck = "https://gitlab.taxcom.ru/api/v4/projects/352/pipelines/" + $PipeId;      
   Write-host -BackgroundColor Green -ForegroundColor Black "UrlPipeline" $UrlPipelineCheck;
   
   $WebResponsePipeline = Invoke-WebRequest -Method Get -Uri $UrlPipelineCheck -Headers $Headers 
@@ -149,7 +145,7 @@ if($CommitMessage -ne "needAutoTest")
     Write-Error -Message "Houston, we have a problem. with" + $PipeLineStatus -ErrorAction Stop;
     break;
   }
-    <#проводим опрос на состояние jobа и если он не в статусе success то ждем 150 секунд опрашиваем снова (так 30 раз) #>
+<# Check the job state and if it is not in success status, wait 150 seconds and poll again (do this 30 times) #>
 
 
   if($saveStatus -eq "success")
@@ -188,7 +184,7 @@ if($CommitMessage -ne "needAutoTest")
        Write-Error -Message "Houston, we have a problem." -ErrorAction Stop;
        break;
     }
-     <# конец обработчика для проверки состояние Job #>    
+<# End of Job state handler #>
     }  
 
 
@@ -199,7 +195,6 @@ if($CommitMessage -ne "needAutoTest")
 $LabelTrim  = ($ENV:JOB_BASE_NAME).TrimStart("label=")
 $LabelValue = $LabelTrim  
 $PathJenkinsWorkSpace = $ENV:WORKSPACE;
-#$Dest = "C:\tools\jenkins-agent\workspace\MultiLabelsController\label\$labelValue"
 $SourcePath = "C:\tools\toolstestsRepo\"
 $DbName = "TestValues.db";
 $ConfigName = "config.json";
